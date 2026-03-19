@@ -51,13 +51,13 @@ class WhatToEatPlugin(Star):
         logger.info("WhatToEatPlugin initialized successfully")
 
     @filter.regex(r"吃什么")
-    async def on_what_to_eat(self, event: AstrMessageEvent):
+    async def on_what_to_eat(self, event: AstrMessageEvent, *args, **kwargs):
         """
         Handle messages containing "吃什么".
 
-        Decide whether to recommend food or echo based on probability.
-        Also blocks default LLM request to avoid duplicate responses.
-        Includes rate limiting to prevent multi-bot loops.
+        Args:
+            event: The message event
+            **kwargs: Additional arguments passed by AstrBot framework
         """
         try:
             # Block default LLM request immediately
@@ -76,12 +76,10 @@ class WhatToEatPlugin(Star):
             if self.rate_limiter:
                 can_respond, force_recommend = self.rate_limiter.can_respond(group_id)
                 if not can_respond:
-                    # Should not happen with current implementation, but handle gracefully
                     event.stop_event()
                     return
 
             # Decide whether to recommend food
-            # Force recommend if rate limit exceeded, otherwise use normal probability
             if force_recommend:
                 # Rate limit exceeded, always recommend food
                 if self.food_manager.has_foods():
@@ -95,7 +93,6 @@ class WhatToEatPlugin(Star):
                     food = self.food_manager.get_random_food()
                     response = self.responder.get_food_response(food)
                 else:
-                    # No foods available, fallback
                     response = self.responder.get_fallback_response()
             else:
                 # Echo response
@@ -110,10 +107,8 @@ class WhatToEatPlugin(Star):
             event.stop_event()
 
         except Exception:
-            # Log exception with traceback for better observability
             logger.exception("WhatToEatPlugin error occurred")
             yield event.plain_result("哎呀，出错了...")
-            # Also stop event on error to prevent duplicate responses
             event.stop_event()
 
     async def terminate(self) -> None:
