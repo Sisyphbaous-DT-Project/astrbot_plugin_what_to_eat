@@ -16,14 +16,14 @@
 
 ## 🆕 更新日志
 
-<details>
-<summary>点击展开查看更新日志</summary>
-
 ### v1.1.1 (2025-03-19)
 - 🐛 **修复 handler 参数不匹配问题**
   - 添加 `*args, **kwargs` 支持，兼容 AstrBot 的多种 handler 调用方式
   - 解决 `TypeError: takes 2 positional arguments but X were given` 错误
 - 🎨 代码格式化
+
+<details>
+<summary>查看历史版本</summary>
 
 ### v1.1.0 (2025-03-19)
 - ✨ **新增频率限制功能**：防止群内多个Bot循环触发
