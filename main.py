@@ -18,7 +18,7 @@ class WhatToEatPlugin(Star):
     识别消息中的"吃什么"关键词，根据配置概率：
     - 推荐大学生常吃的美食
     - 或复读"是啊，吃什么"
-    
+
     新增：频率限制功能，防止多Bot循环触发
     """
 
@@ -35,12 +35,14 @@ class WhatToEatPlugin(Star):
 
         # Read configuration with defaults
         probability = config.get("recommend_probability", 0.3)
-        
+
         # Initialize rate limiter
         rate_limit_enabled = config.get("rate_limit_enabled", True)
         rate_limit_max = config.get("rate_limit_max", 3)
         if rate_limit_enabled:
-            self.rate_limiter = RateLimiter(max_responses=rate_limit_max, window_seconds=60)
+            self.rate_limiter = RateLimiter(
+                max_responses=rate_limit_max, window_seconds=60
+            )
         else:
             self.rate_limiter = None
 
