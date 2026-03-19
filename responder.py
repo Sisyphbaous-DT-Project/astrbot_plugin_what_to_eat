@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from typing import Any
 
 from astrbot.api import logger
 
@@ -23,15 +24,45 @@ class Responder:
         "{food}了解一下？",
     ]
 
-    def __init__(self, probability: float = 0.3) -> None:
+    def __init__(self, probability: Any = 0.3) -> None:
         """
         Initialize the responder.
 
         Args:
             probability: Probability of recommending food (0.0-1.0)
+                         Can be float, int, or string representation
         """
+        # Type-safe conversion
+        probability = self._safe_float(probability, 0.3)
         self.probability = max(0.0, min(1.0, probability))
         logger.info(f"Responder initialized with probability={self.probability}")
+
+    def _safe_float(self, value: Any, default: float) -> float:
+        """
+        Safely convert value to float.
+        
+        Args:
+            value: Value to convert
+            default: Default value if conversion fails
+            
+        Returns:
+            Float value
+        """
+        if value is None:
+            return default
+        
+        if isinstance(value, (int, float)):
+            return float(value)
+        
+        if isinstance(value, str):
+            try:
+                return float(value.strip())
+            except ValueError:
+                logger.warning(f"Could not convert '{value}' to float, using default {default}")
+                return default
+        
+        logger.warning(f"Unexpected type {type(value).__name__} for probability, using default {default}")
+        return default
 
     def should_recommend(self) -> bool:
         """

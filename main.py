@@ -50,7 +50,7 @@ class WhatToEatPlugin(Star):
         try:
             # Block default LLM request immediately
             # Note: should_call_llm(True) actually BLOCKS LLM
-            # because the check is 'not event.call_llm'
+            # because the check in AstrBot is 'not event.call_llm'
             event.should_call_llm(True)
 
             # Decide whether to recommend food
@@ -70,9 +70,12 @@ class WhatToEatPlugin(Star):
             yield event.plain_result(response)
             event.stop_event()
 
-        except Exception as e:
-            logger.error(f"WhatToEatPlugin error: {e}")
+        except Exception:
+            # Log exception with traceback for better observability
+            logger.exception("WhatToEatPlugin error occurred")
             yield event.plain_result("哎呀，出错了...")
+            # Also stop event on error to prevent duplicate responses
+            event.stop_event()
 
     async def terminate(self) -> None:
         """Called when plugin is unloaded."""
