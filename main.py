@@ -49,8 +49,8 @@ class WhatToEatPlugin(Star):
         """
         try:
             # Block default LLM request immediately
-            # Note: should_call_llm(True) actually BLOCKS LLM
-            # because the check in AstrBot is 'not event.call_llm'
+            # Note: In AstrBot, the check is 'if not event.call_llm' before calling LLM.
+            # So setting call_llm=True actually PREVENTS the default LLM from being called.
             event.should_call_llm(True)
 
             # Decide whether to recommend food

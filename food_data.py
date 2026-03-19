@@ -69,6 +69,11 @@ class FoodDataManager:
         
         return result
 
+    def clear_cache(self) -> None:
+        """Clear the cached food list. Call this when config is hot-reloaded."""
+        self._cached_foods = None
+        logger.debug("Food cache cleared")
+
     def get_all_foods(self) -> list[str]:
         """
         Get all available food items.
@@ -80,21 +85,12 @@ class FoodDataManager:
         if self._cached_foods is not None:
             return self._cached_foods
         
-        foods = []
-        foods.extend(self.builtin_foods)
-        foods.extend(self.custom_foods)
-
-        # Deduplicate while preserving order
-        seen: set[str] = set()
-        unique_foods: list[str] = []
-        for food in foods:
-            if food not in seen:
-                seen.add(food)
-                unique_foods.append(food)
+        # Use dict.fromkeys() to deduplicate while preserving order (Python 3.7+)
+        # This is more concise than manual set + list approach
+        all_foods = self.builtin_foods + self.custom_foods
+        self._cached_foods = list(dict.fromkeys(all_foods))
         
-        # Cache the result
-        self._cached_foods = unique_foods
-        return unique_foods
+        return self._cached_foods
 
     def get_random_food(self) -> str | None:
         """

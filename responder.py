@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import random
-from typing import Any
 
 from astrbot.api import logger
 
@@ -24,7 +23,7 @@ class Responder:
         "{food}了解一下？",
     ]
 
-    def __init__(self, probability: Any = 0.3) -> None:
+    def __init__(self, probability: float | int | str | None = 0.3) -> None:
         """
         Initialize the responder.
 
@@ -37,12 +36,12 @@ class Responder:
         self.probability = max(0.0, min(1.0, probability))
         logger.info(f"Responder initialized with probability={self.probability}")
 
-    def _safe_float(self, value: Any, default: float) -> float:
+    def _safe_float(self, value: float | int | str | None, default: float) -> float:
         """
         Safely convert value to float.
         
         Args:
-            value: Value to convert
+            value: Value to convert (supports float, int, str, None)
             default: Default value if conversion fails
             
         Returns:
