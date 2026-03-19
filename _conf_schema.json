@@ -73,5 +73,17 @@
       "type": "string"
     },
     "hint": "添加额外的食物，会与上方列表合并"
+  },
+  "rate_limit_enabled": {
+    "description": "启用频率限制（防止多Bot循环）",
+    "type": "bool",
+    "default": true,
+    "hint": "启用后，在1分钟内超过最大响应次数会强制推荐食物"
+  },
+  "rate_limit_max": {
+    "description": "每分钟最大响应次数",
+    "type": "int",
+    "default": 3,
+    "hint": "超过此次数后，将100%推荐食物而非复读"
   }
 }

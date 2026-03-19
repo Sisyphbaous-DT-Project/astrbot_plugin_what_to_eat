@@ -7,6 +7,7 @@ from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star
 
 from .food_data import FoodDataManager
+from .rate_limiter import RateLimiter
 from .responder import Responder
 
 
@@ -17,6 +18,8 @@ class WhatToEatPlugin(Star):
     识别消息中的"吃什么"关键词，根据配置概率：
     - 推荐大学生常吃的美食
     - 或复读"是啊，吃什么"
+    
+    新增：频率限制功能，防止多Bot循环触发
     """
 
     def __init__(self, context: Context, config: AstrBotConfig) -> None:
@@ -32,6 +35,14 @@ class WhatToEatPlugin(Star):
 
         # Read configuration with defaults
         probability = config.get("recommend_probability", 0.3)
+        
+        # Initialize rate limiter
+        rate_limit_enabled = config.get("rate_limit_enabled", True)
+        rate_limit_max = config.get("rate_limit_max", 3)
+        if rate_limit_enabled:
+            self.rate_limiter = RateLimiter(max_responses=rate_limit_max, window_seconds=60)
+        else:
+            self.rate_limiter = None
 
         # Initialize components
         self.food_manager = FoodDataManager(config)
@@ -46,6 +57,7 @@ class WhatToEatPlugin(Star):
 
         Decide whether to recommend food or echo based on probability.
         Also blocks default LLM request to avoid duplicate responses.
+        Includes rate limiting to prevent multi-bot loops.
         """
         try:
             # Block default LLM request immediately
@@ -53,9 +65,32 @@ class WhatToEatPlugin(Star):
             # So setting call_llm=True actually PREVENTS the default LLM from being called.
             event.should_call_llm(True)
 
+            # Get group ID for rate limiting
+            group_id = event.get_group_id()
+            if not group_id:
+                # Private chat, use sender ID
+                group_id = event.get_sender_id()
+
+            # Check rate limit
+            force_recommend = False
+            if self.rate_limiter:
+                can_respond, force_recommend = self.rate_limiter.can_respond(group_id)
+                if not can_respond:
+                    # Should not happen with current implementation, but handle gracefully
+                    event.stop_event()
+                    return
+
             # Decide whether to recommend food
-            if self.responder.should_recommend():
-                # Recommend food
+            # Force recommend if rate limit exceeded, otherwise use normal probability
+            if force_recommend:
+                # Rate limit exceeded, always recommend food
+                if self.food_manager.has_foods():
+                    food = self.food_manager.get_random_food()
+                    response = self.responder.get_food_response(food)
+                else:
+                    response = self.responder.get_fallback_response()
+            elif self.responder.should_recommend():
+                # Normal probability, recommend food
                 if self.food_manager.has_foods():
                     food = self.food_manager.get_random_food()
                     response = self.responder.get_food_response(food)
@@ -65,6 +100,10 @@ class WhatToEatPlugin(Star):
             else:
                 # Echo response
                 response = self.responder.get_echo_response()
+
+            # Record this response for rate limiting
+            if self.rate_limiter:
+                self.rate_limiter.record_response(group_id)
 
             # Send response and stop event propagation
             yield event.plain_result(response)
