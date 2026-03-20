@@ -1,6 +1,6 @@
 name: astrbot_plugin_what_to_eat
 desc: 是啊，吃什么 - 识别"吃什么"关键词，随机推荐美食或复读
 author: C₂₂H₂₅NO₆
-version: 1.1.1
+version: 1.2.0
 repo: https://github.com/Sisyphbaous-DT-Project/astrbot_plugin_what_to_eat
 display_name: 是啊，吃什么

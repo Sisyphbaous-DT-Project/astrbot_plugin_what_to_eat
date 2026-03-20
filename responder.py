@@ -8,97 +8,74 @@ from astrbot.api import logger
 
 
 class Responder:
-    """Handle message response logic."""
+    """处理消息回复逻辑。"""
 
-    # Fixed echo response (复读回复固定内容)
+    # 复读回复固定内容
     ECHO_RESPONSE = "是啊，吃什么"
 
-    # Food recommendation templates
+    # 食物推荐模板
     RECOMMEND_TEMPLATES = [
         "要不吃{food}？",
         "试试{food}吧！",
         "{food}怎么样？",
-        "推荐你吃{food}~",
+        "推荐你吃{food}！",
         "今天吃{food}吧！",
         "{food}了解一下？",
     ]
 
-    def __init__(self, probability: float | int | str | None = 0.3) -> None:
+    def __init__(self, probability: float = 0.3) -> None:
         """
-        Initialize the responder.
+        初始化回复器。
 
         Args:
-            probability: Probability of recommending food (0.0-1.0)
-                         Can be float, int, or string representation
+            probability: 推荐食物的概率 (0.0-1.0)
+                        默认为 0.3（30% 推荐，70% 复读）
         """
-        # Type-safe conversion
-        probability = self._safe_float(probability, 0.3)
-        self.probability = max(0.0, min(1.0, probability))
-        logger.info(f"Responder initialized with probability={self.probability}")
-
-    def _safe_float(self, value: float | int | str | None, default: float) -> float:
-        """
-        Safely convert value to float.
-        
-        Args:
-            value: Value to convert (supports float, int, str, None)
-            default: Default value if conversion fails
-            
-        Returns:
-            Float value
-        """
-        if value is None:
-            return default
-        
-        if isinstance(value, (int, float)):
-            return float(value)
-        
-        if isinstance(value, str):
-            try:
-                return float(value.strip())
-            except ValueError:
-                logger.warning(f"Could not convert '{value}' to float, using default {default}")
-                return default
-        
-        logger.warning(f"Unexpected type {type(value).__name__} for probability, using default {default}")
-        return default
+        self.probability = max(0.0, min(1.0, float(probability)))
+        logger.info(f"回复器初始化完成: probability={self.probability}")
 
     def should_recommend(self) -> bool:
         """
-        Decide whether to recommend food based on probability.
+        根据概率决定是否推荐食物。
 
         Returns:
-            True to recommend food, False to echo
+            推荐食物返回 True，复读返回 False
+        
+        说明:
+            - probability=0.0: 从不推荐（始终复读）
+            - probability=1.0: 总是推荐（从不复读）
         """
         return random.random() < self.probability
 
     def get_echo_response(self) -> str:
         """
-        Get an echo response.
+        获取复读回复。
 
         Returns:
-            Fixed echo message: "是啊，吃什么"
+            固定复读消息: "是啊，吃什么"
         """
         return self.ECHO_RESPONSE
 
-    def get_food_response(self, food: str) -> str:
+    def get_food_response(self, food: str | None) -> str:
         """
-        Generate a food recommendation response.
+        生成食物推荐回复。
 
         Args:
-            food: Food name
+            food: 食物名称，如果没有可用食物则为 None
 
         Returns:
-            Recommendation message
+            推荐消息，如果 food 为 None 则返回兜底消息
         """
+        if food is None:
+            return self.get_fallback_response()
         template = random.choice(self.RECOMMEND_TEMPLATES)
         return template.format(food=food)
 
     def get_fallback_response(self) -> str:
         """
-        Get fallback response when no foods available.
+        获取兜底回复（当没有可用食物时）。
 
         Returns:
-            Fallback message
+            兜底消息
         """
         return "我想不到推荐什么...你自己决定吧！"

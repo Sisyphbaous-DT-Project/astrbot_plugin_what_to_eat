@@ -39,9 +39,15 @@ class WhatToEatPlugin(Star):
         # Initialize rate limiter
         rate_limit_enabled = config.get("rate_limit_enabled", True)
         rate_limit_max = config.get("rate_limit_max", 3)
+        rate_limit_window = config.get("rate_limit_window_seconds", 60)
+        echo_cooldown_enabled = config.get("echo_cooldown_enabled", True)
+        echo_cooldown_seconds = config.get("echo_cooldown_seconds", 15)
         if rate_limit_enabled:
             self.rate_limiter = RateLimiter(
-                max_responses=rate_limit_max, window_seconds=60
+                max_responses=rate_limit_max,
+                window_seconds=rate_limit_window,
+                echo_cooldown_enabled=echo_cooldown_enabled,
+                echo_cooldown_seconds=echo_cooldown_seconds,
             )
         else:
             self.rate_limiter = None
@@ -50,69 +56,71 @@ class WhatToEatPlugin(Star):
         self.food_manager = FoodDataManager(config)
         self.responder = Responder(probability)
 
-        logger.info("WhatToEatPlugin initialized successfully")
+        logger.info("吃什么插件初始化成功")
 
     @filter.regex(r"吃什么")
     async def on_what_to_eat(self, event: AstrMessageEvent, *args, **kwargs):
         """
-        Handle messages containing "吃什么".
+        处理包含"吃什么"的消息。
 
         Args:
-            event: The message event
-            **kwargs: Additional arguments passed by AstrBot framework
+            event: 消息事件
+            **kwargs: AstrBot 框架传入的额外参数
         """
         try:
-            # Block default LLM request immediately
-            # Note: In AstrBot, the check is 'if not event.call_llm' before calling LLM.
-            # So setting call_llm=True actually PREVENTS the default LLM from being called.
+            # 立即阻止默认 LLM 请求
+            # 注意：在 AstrBot 中，调用前会检查 'if not event.call_llm'
+            # 所以设置 call_llm=True 实际上是阻止默认 LLM 被调用
             event.should_call_llm(True)
 
-            # Get group ID for rate limiting
+            # 获取群组 ID 用于频率限制
             group_id = event.get_group_id()
             if not group_id:
-                # Private chat, use sender ID
+                # 私聊，使用发送者 ID
                 group_id = event.get_sender_id()
 
-            # Check rate limit
+            # 检查频率限制和复读冷却（原子操作）
             force_recommend = False
+            echo_cooldown_active = False
             if self.rate_limiter:
-                can_respond, force_recommend = self.rate_limiter.can_respond(group_id)
-                if not can_respond:
-                    event.stop_event()
-                    return
+                # 使用原子操作检查并记录，避免竞态条件
+                _, force_recommend = self.rate_limiter.check_and_record(group_id)
+                echo_cooldown_active = self.rate_limiter.is_in_echo_cooldown(group_id)
 
-            # Decide whether to recommend food
-            if force_recommend:
-                # Rate limit exceeded, always recommend food
-                if self.food_manager.has_foods():
-                    food = self.food_manager.get_random_food()
-                    response = self.responder.get_food_response(food)
-                else:
-                    response = self.responder.get_fallback_response()
-            elif self.responder.should_recommend():
-                # Normal probability, recommend food
+            # 决定是否推荐食物
+            should_recommend = force_recommend or echo_cooldown_active or self.responder.should_recommend()
+            
+            if should_recommend:
+                # 推荐食物（强制或按概率）
                 if self.food_manager.has_foods():
                     food = self.food_manager.get_random_food()
                     response = self.responder.get_food_response(food)
                 else:
                     response = self.responder.get_fallback_response()
             else:
-                # Echo response
+                # 复读回复
                 response = self.responder.get_echo_response()
+                # 记录复读时间用于冷却追踪
+                if self.rate_limiter:
+                    self.rate_limiter.record_echo(group_id)
 
-            # Record this response for rate limiting
-            if self.rate_limiter:
-                self.rate_limiter.record_response(group_id)
-
-            # Send response and stop event propagation
+            # 发送响应并停止事件传播
             yield event.plain_result(response)
             event.stop_event()
 
-        except Exception:
-            logger.exception("WhatToEatPlugin error occurred")
-            yield event.plain_result("哎呀，出错了...")
-            event.stop_event()
+        except Exception as e:
+            logger.exception("吃什么插件发生错误")
+            try:
+                yield event.plain_result("哎呀，出错了...")
+                event.stop_event()
+            except Exception as inner_e:
+                # 区分原始异常和发送失败异常
+                logger.error(f"发送错误消息失败: {inner_e}")
+                # 检测可能的系统性错误（事件系统故障等）
+                error_msg = str(inner_e).lower()
+                if any(kw in error_msg for kw in ["event", "yield", "generator", "async"]):
+                    logger.critical(f"检测到事件系统错误: {inner_e}")
 
     async def terminate(self) -> None:
-        """Called when plugin is unloaded."""
-        logger.info("WhatToEatPlugin terminated")
+        """插件卸载时调用。"""
+        logger.info("吃什么插件已终止")

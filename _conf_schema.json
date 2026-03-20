@@ -81,9 +81,27 @@
     "hint": "启用后，在1分钟内超过最大响应次数会强制推荐食物"
   },
   "rate_limit_max": {
-    "description": "每分钟最大响应次数",
+    "description": "最大响应次数",
     "type": "int",
     "default": 3,
     "hint": "超过此次数后，将100%推荐食物而非复读"
+  },
+  "rate_limit_window_seconds": {
+    "description": "频率限制时间窗口（秒）",
+    "type": "int",
+    "default": 60,
+    "hint": "与上方最大响应次数配合使用，默认60秒（1分钟）"
+  },
+  "echo_cooldown_enabled": {
+    "description": "启用复读冷却（复读后的一段时间内强制推荐食物）",
+    "type": "bool",
+    "default": true,
+    "hint": "启用后，复读后的冷却时间内不会再复读，而是强制推荐食物"
+  },
+  "echo_cooldown_seconds": {
+    "description": "复读后的冷却时间（秒）",
+    "type": "int",
+    "default": 15,
+    "hint": "复读后，在此时间内再次触发将强制推荐食物"
   }
 }

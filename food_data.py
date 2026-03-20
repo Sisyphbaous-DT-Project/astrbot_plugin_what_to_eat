@@ -3,90 +3,93 @@
 from __future__ import annotations
 
 import random
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from astrbot.api import logger
+
+if TYPE_CHECKING:
+    from astrbot.api import AstrBotConfig
 
 
 class FoodDataManager:
     """管理食物数据，包括内置列表和用户自定义列表。"""
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: AstrBotConfig) -> None:
         """
-        Initialize the food data manager.
+        初始化食物数据管理器。
 
         Args:
-            config: Plugin configuration dictionary
+            config: 插件配置 (AstrBotConfig)
         """
         self.config = config
         
-        # Validate and sanitize builtin_foods
+        # 验证并清理内置食物列表
         builtin_foods_raw = config.get("builtin_foods", [])
         self.builtin_foods = self._sanitize_food_list(builtin_foods_raw, "builtin_foods")
         
-        # Validate and sanitize custom_foods
+        # 验证并清理自定义食物列表
         custom_foods_raw = config.get("custom_foods", [])
         self.custom_foods = self._sanitize_food_list(custom_foods_raw, "custom_foods")
         
-        # Cache the merged list
+        # 缓存合并后的列表
         self._cached_foods: list[str] | None = None
         
         logger.info(
-            f"FoodDataManager initialized: builtin={len(self.builtin_foods)}, "
+            f"食物数据管理器初始化完成: builtin={len(self.builtin_foods)}, "
             f"custom={len(self.custom_foods)}"
         )
 
     def _sanitize_food_list(self, raw_value: Any, field_name: str) -> list[str]:
         """
-        Sanitize food list from config.
+        清理配置文件中的食物列表。
         
         Args:
-            raw_value: Raw config value
-            field_name: Field name for logging
+            raw_value: 原始配置值
+            field_name: 用于日志记录的字段名
             
         Returns:
-            Sanitized list of strings
+            清理后的字符串列表
         """
         if raw_value is None:
             return []
         
         if isinstance(raw_value, str):
-            # Handle case where config might be a string instead of list
-            logger.warning(f"{field_name} is a string, converting to list")
+            # 处理配置可能是字符串而非列表的情况
+            logger.warning(f"{field_name} 是字符串，正在转换为列表")
             return [raw_value] if raw_value.strip() else []
         
         if not isinstance(raw_value, list):
-            logger.warning(f"{field_name} has unexpected type {type(raw_value).__name__}, using empty list")
+            logger.warning(f"{field_name} 类型异常 {type(raw_value).__name__}，使用空列表")
             return []
         
-        # Filter out non-string items and empty strings
+        # 过滤掉非字符串项和空字符串
         result = []
         for item in raw_value:
             if isinstance(item, str) and item.strip():
                 result.append(item.strip())
             else:
-                logger.debug(f"Skipping invalid item in {field_name}: {item}")
+                logger.warning(f"跳过 {field_name} 中的无效项: {item!r}")
         
         return result
 
     def clear_cache(self) -> None:
-        """Clear the cached food list. Call this when config is hot-reloaded."""
+        """清除缓存的食物列表。配置热重载时调用。"""
         self._cached_foods = None
-        logger.debug("Food cache cleared")
+        logger.debug("食物缓存已清除")
 
     def get_all_foods(self) -> list[str]:
         """
-        Get all available food items.
+        获取所有可用的食物项。
 
         Returns:
-            Merged list of built-in and custom foods
+            内置和自定义食物合并后的列表
         """
-        # Return cached list if available
+        # 如果缓存可用，直接返回
         if self._cached_foods is not None:
             return self._cached_foods
         
-        # Use dict.fromkeys() to deduplicate while preserving order (Python 3.7+)
-        # This is more concise than manual set + list approach
+        # 使用 dict.fromkeys() 去重同时保持顺序（Python 3.7+）
+        # 比手动 set + list 方式更简洁
         all_foods = self.builtin_foods + self.custom_foods
         self._cached_foods = list(dict.fromkeys(all_foods))
         
@@ -94,10 +97,10 @@ class FoodDataManager:
 
     def get_random_food(self) -> str | None:
         """
-        Get a random food item.
+        获取随机食物项。
 
         Returns:
-            Food name, or None if no foods available
+            食物名称，如果没有可用食物则返回 None
         """
         foods = self.get_all_foods()
         if not foods:
@@ -105,6 +108,6 @@ class FoodDataManager:
         return random.choice(foods)
 
     def has_foods(self) -> bool:
-        """Check if any foods are available."""
-        # Use cached list to avoid recomputation
+        """检查是否有可用的食物。"""
+        # 使用缓存列表避免重复计算
         return len(self.get_all_foods()) > 0
