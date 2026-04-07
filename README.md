@@ -158,10 +158,10 @@
 
 ```json
 {
-  "food_images": {
-    "黄焖鸡米饭": ["images/huangmenji1.jpg", "images/huangmenji2.jpg"],
-    "麻辣烫": ["images/malatang.jpg"]
-  }
+  "food_images": [
+    {"food_name": "黄焖鸡米饭", "images": ["images/huangmenji1.jpg", "images/huangmenji2.jpg"]},
+    {"food_name": "麻辣烫", "images": ["images/malatang.jpg"]}
+  ]
 }
 ```
 

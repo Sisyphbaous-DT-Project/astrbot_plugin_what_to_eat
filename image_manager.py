@@ -27,7 +27,7 @@ class ImageManager:
         self.plugin_dir = plugin_dir
 
         # 读取食物图片配置
-        raw_food_images = config.get("food_images", {})
+        raw_food_images = config.get("food_images", [])
         self.food_images = self._sanitize_food_images(raw_food_images)
 
         logger.info(f"图片管理器初始化完成: {len(self.food_images)} 个食物有图片配置")
@@ -37,16 +37,21 @@ class ImageManager:
         清理食物图片配置。
 
         Args:
-            raw_value: 原始配置值
+            raw_value: 原始配置值（列表格式）
 
         Returns:
             清理后的食物名到图片路径列表的映射
         """
-        if not raw_value or not isinstance(raw_value, dict):
+        if not raw_value or not isinstance(raw_value, list):
             return {}
 
         result = {}
-        for food_name, image_paths in raw_value.items():
+        for item in raw_value:
+            if not isinstance(item, dict):
+                logger.warning(f"跳过无效的食物图片配置项: {item!r}")
+                continue
+
+            food_name = item.get("food_name", "")
             if not isinstance(food_name, str) or not food_name.strip():
                 logger.warning(f"跳过无效的食物名: {food_name!r}")
                 continue
@@ -54,7 +59,8 @@ class ImageManager:
             # 规范化食物名（去除首尾空格）
             food_name = food_name.strip()
 
-            # 处理图片路径
+            # 获取图片路径列表
+            image_paths = item.get("images", [])
             if isinstance(image_paths, str):
                 # 单个图片路径转为列表
                 image_paths = [image_paths]
@@ -168,6 +174,6 @@ class ImageManager:
         Args:
             config: 新的插件配置
         """
-        raw_food_images = config.get("food_images", {})
+        raw_food_images = config.get("food_images", [])
         self.food_images = self._sanitize_food_images(raw_food_images)
         logger.info(f"图片配置已重载: {len(self.food_images)} 个食物有图片")
