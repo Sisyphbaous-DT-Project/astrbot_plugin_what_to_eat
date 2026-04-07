@@ -8,8 +8,9 @@ import re
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star
-
 from .food_data import FoodDataManager
+
+
 from .image_manager import ImageManager
 from .rate_limiter import RateLimiter
 from .responder import Responder
@@ -79,8 +80,8 @@ class WhatToEatPlugin(Star):
 
         logger.info("吃什么插件初始化成功")
 
-    @filter.on_message()
-    async def on_message(self, event: AstrMessageEvent, *args, **kwargs):
+    @filter.event_message_type(filter.EventMessageType.ALL)
+    async def on_what_to_eat(self, event: AstrMessageEvent, *args, **kwargs):
         """
         处理消息，检查是否包含配置的关键词。
 
