@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import os
 import random
-from typing import TYPE_CHECKING, Any
+import re
+from typing import TYPE_CHECKING
 
 from astrbot.api import logger
 
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
 
 
 class ImageManager:
-    """管理食物图片，支持多图片随机选择。"""
+    """管理食物图片，支持从文件夹自动扫描和配置两种方式。"""
 
     def __init__(self, config: AstrBotConfig, plugin_dir: str) -> None:
         """
@@ -25,98 +26,105 @@ class ImageManager:
         """
         self.config = config
         self.plugin_dir = plugin_dir
+        self.images_dir = os.path.join(plugin_dir, "images")
 
-        # 读取食物图片配置
-        raw_food_images = config.get("food_images", [])
-        self.food_images = self._sanitize_food_images(raw_food_images)
+        # 从文件夹扫描图片
+        self.scanned_images = self._scan_images_folder()
 
-        logger.info(f"图片管理器初始化完成: {len(self.food_images)} 个食物有图片配置")
+        logger.info(f"图片管理器初始化完成: {len(self.scanned_images)} 个食物有图片")
 
-    def _sanitize_food_images(self, raw_value: Any) -> dict[str, list[str]]:
+    def _scan_images_folder(self) -> dict[str, list[str]]:
         """
-        清理食物图片配置。
+        扫描 images 文件夹，根据文件名匹配食物。
 
-        Args:
-            raw_value: 原始配置值（列表格式）
+        文件名格式：
+        - 黄焖鸡米饭.jpg
+        - 黄焖鸡米饭_1.jpg
+        - 黄焖鸡米饭-1.jpg
 
         Returns:
-            清理后的食物名到图片路径列表的映射
+            食物名到图片路径列表的映射
         """
-        if not raw_value or not isinstance(raw_value, list):
-            return {}
+        result: dict[str, list[str]] = {}
 
-        result = {}
-        for item in raw_value:
-            if not isinstance(item, dict):
-                logger.warning(f"跳过无效的食物图片配置项: {item!r}")
-                continue
+        if not os.path.isdir(self.images_dir):
+            logger.debug(f"图片目录不存在: {self.images_dir}")
+            return result
 
-            food_name = item.get("food_name", "")
-            if not isinstance(food_name, str) or not food_name.strip():
-                logger.warning(f"跳过无效的食物名: {food_name!r}")
-                continue
+        # 支持的图片格式
+        image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
 
-            # 规范化食物名（去除首尾空格）
-            food_name = food_name.strip()
+        try:
+            for filename in os.listdir(self.images_dir):
+                filepath = os.path.join(self.images_dir, filename)
 
-            # 获取图片路径列表
-            image_paths = item.get("images", [])
-            if isinstance(image_paths, str):
-                # 单个图片路径转为列表
-                image_paths = [image_paths]
-            elif not isinstance(image_paths, list):
-                logger.warning(f"食物 '{food_name}' 的图片配置格式无效，跳过")
-                continue
+                # 跳过目录
+                if not os.path.isfile(filepath):
+                    continue
 
-            # 过滤有效路径
-            valid_paths = []
-            for path in image_paths:
-                if isinstance(path, str) and path.strip():
-                    valid_paths.append(path.strip())
+                # 检查扩展名
+                ext = os.path.splitext(filename)[1].lower()
+                if ext not in image_extensions:
+                    continue
 
-            if valid_paths:
-                result[food_name] = valid_paths
+                # 从文件名提取食物名
+                # 支持格式：食物名.jpg、食物名_1.jpg、食物名-1.jpg
+                food_name = self._extract_food_name(filename)
+
+                if food_name:
+                    if food_name not in result:
+                        result[food_name] = []
+                    result[food_name].append(filepath)
+
+        except OSError as e:
+            logger.warning(f"扫描图片目录失败: {e}")
+
+        # 对每个食物的图片列表排序，保持顺序一致
+        for food_name in result:
+            result[food_name].sort()
 
         return result
 
-    def _get_full_path(self, relative_path: str) -> str:
+    def _extract_food_name(self, filename: str) -> str | None:
         """
-        将相对路径转换为绝对路径。
+        从文件名提取食物名称。
 
         Args:
-            relative_path: 相对于插件目录的路径
+            filename: 文件名（不含路径）
 
         Returns:
-            绝对路径
+            食物名称，如果无法提取则返回 None
         """
-        # 如果已经是绝对路径，直接返回
-        if os.path.isabs(relative_path):
-            return relative_path
+        # 移除扩展名
+        name_without_ext = os.path.splitext(filename)[0]
 
-        # 相对于插件目录
-        return os.path.join(self.plugin_dir, relative_path)
+        # 移除序号后缀（_1、_2、-1、-2 等）
+        # 匹配末尾的 _数字 或 -数字
+        cleaned_name = re.sub(r"[_-]\d+$", "", name_without_ext)
+
+        if cleaned_name.strip():
+            return cleaned_name.strip()
+
+        return None
 
     def has_images(self, food_name: str) -> bool:
         """
-        检查食物是否有图片配置。
+        检查食物是否有图片。
 
         Args:
             food_name: 食物名称
 
         Returns:
-            是否有图片配置（不检查文件是否存在）
+            是否有图片（扫描到的或配置的）
         """
         if not food_name:
             return False
 
-        # 精确匹配
-        if food_name in self.food_images:
-            return len(self.food_images[food_name]) > 0
-
-        # 尝试去除首尾空格后的匹配
         food_name_stripped = food_name.strip()
-        if food_name_stripped in self.food_images:
-            return len(self.food_images[food_name_stripped]) > 0
+
+        # 检查扫描到的图片
+        if food_name_stripped in self.scanned_images:
+            return len(self.scanned_images[food_name_stripped]) > 0
 
         return False
 
@@ -128,35 +136,23 @@ class ImageManager:
             food_name: 食物名称
 
         Returns:
-            图片的绝对路径，如果没有配置或文件不存在则返回 None
+            图片的绝对路径，如果没有则返回 None
         """
         if not food_name:
             return None
 
-        # 获取图片路径列表
-        image_paths = self.food_images.get(food_name)
+        food_name_stripped = food_name.strip()
 
-        # 尝试去除首尾空格后的匹配
-        if image_paths is None:
-            food_name_stripped = food_name.strip()
-            image_paths = self.food_images.get(food_name_stripped)
+        # 优先使用扫描到的图片
+        image_paths = self.scanned_images.get(food_name_stripped)
 
-        if not image_paths:
-            return None
+        if image_paths:
+            # 过滤掉不存在的文件（可能被删除了）
+            existing_paths = [p for p in image_paths if os.path.isfile(p)]
+            if existing_paths:
+                return random.choice(existing_paths)
 
-        # 随机选择一张图片，并检查文件是否存在
-        # 为了避免重复检查不存在的文件，先过滤出存在的图片
-        existing_paths = []
-        for path in image_paths:
-            full_path = self._get_full_path(path)
-            if os.path.isfile(full_path):
-                existing_paths.append(full_path)
-
-        if not existing_paths:
-            logger.debug(f"食物 '{food_name}' 的图片配置存在但文件不存在")
-            return None
-
-        return random.choice(existing_paths)
+        return None
 
     def get_all_foods_with_images(self) -> list[str]:
         """
@@ -165,15 +161,9 @@ class ImageManager:
         Returns:
             食物名称列表
         """
-        return list(self.food_images.keys())
+        return list(self.scanned_images.keys())
 
-    def reload_config(self, config: AstrBotConfig) -> None:
-        """
-        重新加载配置（用于配置热重载）。
-
-        Args:
-            config: 新的插件配置
-        """
-        raw_food_images = config.get("food_images", [])
-        self.food_images = self._sanitize_food_images(raw_food_images)
-        logger.info(f"图片配置已重载: {len(self.food_images)} 个食物有图片")
+    def reload(self) -> None:
+        """重新扫描图片文件夹（用于热重载）。"""
+        self.scanned_images = self._scan_images_folder()
+        logger.info(f"图片配置已重载: {len(self.scanned_images)} 个食物有图片")

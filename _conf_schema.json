@@ -112,27 +112,5 @@
     "type": "int",
     "default": 15,
     "hint": "复读后，在此时间内再次触发将强制推荐食物"
-  },
-  "food_images": {
-    "description": "食物图片映射列表",
-    "type": "list",
-    "default": [],
-    "items": {
-      "type": "object",
-      "properties": {
-        "food_name": {
-          "type": "string",
-          "description": "食物名称"
-        },
-        "images": {
-          "type": "list",
-          "items": {
-            "type": "string"
-          },
-          "description": "图片路径列表"
-        }
-      }
-    },
-    "hint": "格式：[{\"food_name\": \"黄焖鸡\", \"images\": [\"a.jpg\", \"b.jpg\"]}]"
   }
 }

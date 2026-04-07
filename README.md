@@ -102,7 +102,6 @@
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
 | `trigger_keywords` | list | ["吃什么"] | 触发插件的关键词列表（v1.3.0） |
-| `food_images` | object | {} | 食物图片映射配置（v1.3.0） |
 | `recommend_probability` | float | 0.3 | 推荐食物的概率（0.0-1.0） |
 | `builtin_foods` | list | 50个食物 | 内置食物列表，可自由编辑 |
 | `custom_foods` | list | [] | 额外的自定义食物列表 |
@@ -149,28 +148,30 @@
 
 ### 食物配图（v1.3.0）
 
-**功能**：为食物绑定图片，推荐时图文一起发送。
+**功能**：为食物添加图片，推荐时图文一起发送。
 
-**配置方法**：
+**使用方法**：
 1. 在插件目录下创建 `images/` 文件夹
-2. 放入食物图片（如 `huangmenji.jpg`）
-3. 在 WebUI 配置 `food_images`：
+2. 把图片放入该文件夹，按以下格式命名：
+   - `食物名.jpg` - 基础格式
+   - `食物名_1.jpg` - 带序号格式（支持多图随机）
+   - `食物名-1.jpg` - 也支持用 `-` 分隔
 
-```json
-{
-  "food_images": [
-    {"food_name": "黄焖鸡米饭", "images": ["images/huangmenji1.jpg", "images/huangmenji2.jpg"]},
-    {"food_name": "麻辣烫", "images": ["images/malatang.jpg"]}
-  ]
-}
+**示例**：
+```
+images/
+├── 黄焖鸡米饭.jpg
+├── 黄焖鸡米饭_1.jpg
+├── 麻辣烫.jpg
+└── 兰州拉面.png
 ```
 
 **说明**：
-- 一个食物可绑定多张图片，随机选择一张发送
-- 图片路径相对于插件目录
-- 无图片配置时正常发送文字
+- 支持的格式：jpg、jpeg、png、gif、webp、bmp
+- 一个食物可放多张图片，随机选择一张发送
+- 无图片时正常发送文字推荐
 - 复读时不发送图片，保持简洁
-- 图片不存在时自动降级为文字回复
+- 图片自动扫描，新增/删除图片后重启插件生效
 
 ### 配置示例
 
@@ -340,7 +341,8 @@ astrbot_plugin_what_to_eat/
 ├── metadata.yaml         # 插件元数据
 ├── _conf_schema.json     # 配置定义
 ├── logo.png              # 插件图标
-└── README.md             # 本文件
+├── README.md             # 本文件
+└── images/               # 食物图片文件夹（v1.3.0新增，手动创建）
 ```
 
 ## 🤝 贡献指南
