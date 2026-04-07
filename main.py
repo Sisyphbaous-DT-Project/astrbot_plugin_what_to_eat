@@ -82,6 +82,8 @@ class WhatToEatPlugin(Star):
 
         logger.info("吃什么插件初始化成功")
 
+        logger.info("吃什么插件初始化成功")
+
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def on_what_to_eat(self, event: AstrMessageEvent, *args, **kwargs):
         """

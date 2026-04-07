@@ -112,5 +112,12 @@
     "type": "int",
     "default": 15,
     "hint": "复读后，在此时间内再次触发将强制推荐食物"
+  },
+  "uploaded_images": {
+    "description": "上传的食物图片（在下方上传图片，文件名包含食物名即可自动绑定）",
+    "type": "file",
+    "default": [],
+    "file_types": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"],
+    "hint": "上传图片，建议命名为：食物名.jpg、食物名_1.jpg 等格式"
   }
 }

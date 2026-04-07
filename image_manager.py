@@ -31,7 +31,17 @@ class ImageManager:
         # 从文件夹扫描图片
         self.scanned_images = self._scan_images_folder()
 
-        logger.info(f"图片管理器初始化完成: {len(self.scanned_images)} 个食物有图片")
+        # 从配置读取上传的图片
+        self.config_images = self._scan_config_images(config)
+
+        # 合并两个来源的图片
+        self.all_images = self._merge_images(self.scanned_images, self.config_images)
+
+        logger.info(
+            f"图片管理器初始化完成: "
+            f"文件夹扫描 {len(self.scanned_images)} 个, "
+            f"配置上传 {len(self.config_images)} 个"
+        )
 
     def _scan_images_folder(self) -> dict[str, list[str]]:
         """
@@ -122,9 +132,9 @@ class ImageManager:
 
         food_name_stripped = food_name.strip()
 
-        # 检查扫描到的图片
-        if food_name_stripped in self.scanned_images:
-            return len(self.scanned_images[food_name_stripped]) > 0
+        # 检查所有图片（扫描的+配置的）
+        if food_name_stripped in self.all_images:
+            return len(self.all_images[food_name_stripped]) > 0
 
         return False
 
@@ -143,8 +153,8 @@ class ImageManager:
 
         food_name_stripped = food_name.strip()
 
-        # 优先使用扫描到的图片
-        image_paths = self.scanned_images.get(food_name_stripped)
+        # 使用所有图片（扫描的+配置的）
+        image_paths = self.all_images.get(food_name_stripped)
 
         if image_paths:
             # 过滤掉不存在的文件（可能被删除了）
@@ -161,9 +171,97 @@ class ImageManager:
         Returns:
             食物名称列表
         """
-        return list(self.scanned_images.keys())
+        return list(self.all_images.keys())
+
+    def _scan_config_images(self, config) -> dict[str, list[str]]:
+        """
+        从配置中读取上传的图片。
+
+        Args:
+            config: 插件配置
+
+        Returns:
+            食物名到图片路径列表的映射
+        """
+        result: dict[str, list[str]] = {}
+
+        # 获取上传的图片列表
+        uploaded_images = config.get("uploaded_images", [])
+        if not uploaded_images or not isinstance(uploaded_images, list):
+            return result
+
+        for filepath in uploaded_images:
+            if not isinstance(filepath, str) or not filepath.strip():
+                continue
+
+            # 获取文件名（不含路径）
+            filename = os.path.basename(filepath)
+
+            # 从文件名提取食物名
+            food_name = self._extract_food_name(filename)
+
+            if food_name:
+                # 转换为绝对路径
+                full_path = self._get_full_path(filepath)
+
+                if food_name not in result:
+                    result[food_name] = []
+                result[food_name].append(full_path)
+
+        return result
+
+    def _get_full_path(self, relative_path: str) -> str:
+        """
+        将相对路径转换为绝对路径。
+
+        Args:
+            relative_path: 相对于插件目录的路径（如 files/xxx/yyy.jpg）
+
+        Returns:
+            绝对路径
+        """
+        # 如果已经是绝对路径，直接返回
+        if os.path.isabs(relative_path):
+            return relative_path
+
+        # 相对于插件数据目录（files/ 在插件数据目录下）
+        # AstrBot 上传的文件保存在 data/plugins/插件名/files/
+        return os.path.join(self.plugin_dir, relative_path)
+
+    def _merge_images(
+        self,
+        scanned: dict[str, list[str]],
+        config: dict[str, list[str]]
+    ) -> dict[str, list[str]]:
+        """
+        合并文件夹扫描和配置上传的图片。
+
+        Args:
+            scanned: 文件夹扫描的图片
+            config: 配置上传的图片
+
+        Returns:
+            合并后的图片映射
+        """
+        result = dict(scanned)  # 复制扫描的图片
+
+        # 合并配置上传的图片
+        for food_name, image_paths in config.items():
+            if food_name not in result:
+                result[food_name] = []
+            result[food_name].extend(image_paths)
+
+        # 去重并排序
+        for food_name in result:
+            # 使用 dict.fromkeys 去重保持顺序
+            result[food_name] = list(dict.fromkeys(result[food_name]))
+            result[food_name].sort()
+
+        return result
 
     def reload(self) -> None:
-        """重新扫描图片文件夹（用于热重载）。"""
+        """重新扫描图片（用于热重载）。"""
         self.scanned_images = self._scan_images_folder()
-        logger.info(f"图片配置已重载: {len(self.scanned_images)} 个食物有图片")
+        self.config_images = self._scan_config_images(self.config)
+        self.all_images = self._merge_images(self.scanned_images, self.config_images)
+        logger.info(f"图片配置已重载: {len(self.all_images)} 个食物有图片")
