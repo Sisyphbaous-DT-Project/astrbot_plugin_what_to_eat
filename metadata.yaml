@@ -1,0 +1,6 @@
+name: astrbot_plugin_what_to_eat
+desc: 一款为 AstrBot 开发的简单有趣的插件，帮助大学生解决每天最头疼的问题——今天吃什么？
+author: C₂₂H₂₅NO₆
+version: 1.3.0
+repo: https://github.com/Sisyphbaous-DT-Project/astrbot_plugin_what_to_eat
+display_name: 是啊，吃什么

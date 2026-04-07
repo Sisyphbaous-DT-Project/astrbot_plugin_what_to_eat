@@ -1,0 +1,122 @@
+{
+  "trigger_keywords": {
+    "description": "触发插件的关键词列表",
+    "type": "list",
+    "default": ["吃什么"],
+    "items": {
+      "type": "string"
+    },
+    "hint": "配置多个关键词，如：吃什么、吃啥、吃点什么"
+  },
+  "recommend_probability": {
+    "description": "推荐食物的概率 (0.0-1.0)",
+    "type": "float",
+    "default": 0.3,
+    "hint": "设为0.3表示30%概率推荐食物，70%概率复读"
+  },
+  "builtin_foods": {
+    "description": "内置食物列表（可编辑）",
+    "type": "list",
+    "default": [
+      "黄焖鸡米饭",
+      "麻辣烫",
+      "兰州拉面",
+      "沙县小吃",
+      "重庆小面",
+      "螺蛳粉",
+      "米线",
+      "炒饭",
+      "炒面",
+      "盖浇饭",
+      "水饺",
+      "馄饨",
+      "煎饼果子",
+      "肉夹馍",
+      "烤冷面",
+      "关东煮",
+      "冒菜",
+      "香锅",
+      "炸鸡",
+      "汉堡",
+      "披萨",
+      "寿司",
+      "便当",
+      "凉皮",
+      "凉面",
+      "热干面",
+      "酸辣粉",
+      "炸酱面",
+      "牛肉面",
+      "叉烧饭",
+      "烧腊饭",
+      "煲仔饭",
+      "石锅拌饭",
+      "部队锅",
+      "烤肉饭",
+      "猪脚饭",
+      "卤肉饭",
+      "烤鸭饭",
+      "口水鸡",
+      "酸菜鱼",
+      "水煮鱼",
+      "毛血旺",
+      "干锅",
+      "烤鱼",
+      "烧烤",
+      "奶茶+面包",
+      "便利店",
+      "泡面",
+      "食堂自选",
+      "轻食沙拉"
+    ],
+    "items": {
+      "type": "string"
+    },
+    "hint": "默认50个大学生常吃的食物，可自由增删改"
+  },
+  "custom_foods": {
+    "description": "额外的自定义食物列表",
+    "type": "list",
+    "default": [],
+    "items": {
+      "type": "string"
+    },
+    "hint": "添加额外的食物，会与上方列表合并"
+  },
+  "rate_limit_enabled": {
+    "description": "启用频率限制（防止多Bot循环）",
+    "type": "bool",
+    "default": true,
+    "hint": "启用后，在1分钟内超过最大响应次数会强制推荐食物"
+  },
+  "rate_limit_max": {
+    "description": "最大响应次数",
+    "type": "int",
+    "default": 3,
+    "hint": "超过此次数后，将100%推荐食物而非复读"
+  },
+  "rate_limit_window_seconds": {
+    "description": "频率限制时间窗口（秒）",
+    "type": "int",
+    "default": 60,
+    "hint": "与上方最大响应次数配合使用，默认60秒（1分钟）"
+  },
+  "echo_cooldown_enabled": {
+    "description": "启用复读冷却（复读后的一段时间内强制推荐食物）",
+    "type": "bool",
+    "default": true,
+    "hint": "启用后，复读后的冷却时间内不会再复读，而是强制推荐食物"
+  },
+  "echo_cooldown_seconds": {
+    "description": "复读后的冷却时间（秒）",
+    "type": "int",
+    "default": 15,
+    "hint": "复读后，在此时间内再次触发将强制推荐食物"
+  },
+  "food_images": {
+    "description": "食物图片映射",
+    "type": "object",
+    "default": {},
+    "hint": "格式：{\"食物名\": [\"图片路径1\", \"图片路径2\"]}，路径相对于插件目录"
+  }
+}
